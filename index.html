@@ -15,7 +15,7 @@
         body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 20px; text-align: center; max-width: 500px; margin: auto; background: var(--bg); color: #333; }
         .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
         
-        input[type="text"], input[type="file"] { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-bottom: 8px; }
         
         .btn-blue { background: var(--primary); color: white; }
@@ -28,208 +28,213 @@
         .connected { background: #d4edda; color: #155724; }
         .error { background: #f8d7da; color: #721c24; }
 
-        .spinner { display: none; width: 25px; height: 25px; border: 4px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s linear infinite; margin: 10px auto; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Switch */
+        .switch-container { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; font-size: 14px; font-weight: bold; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(20px); }
 
-        #qrcode-container { display: none; margin: 15px auto; padding: 10px; background: white; width: 128px; height: 128px; border-radius: 8px; }
-        #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #000; margin-bottom: 10px; }
+        /* Drag and Drop */
+        .drop-zone { border: 2px dashed #ccc; border-radius: 12px; padding: 25px; background: #fafafa; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
+        .drop-zone.drag-over { border-color: var(--primary); background: #eef6ff; }
 
-        .progress-container { width: 100%; background: #eee; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; }
-        #progress-bar { width: 0%; height: 20px; background: var(--success); color: white; font-size: 12px; line-height: 20px; }
-
-        #chat-box { height: 120px; overflow-y: auto; background: #f9f9f9; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: left; font-size: 14px; border: 1px solid #eee; }
+        #chat-box { height: 120px; overflow-y: auto; background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: left; }
         .preview-card { display: flex; align-items: center; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 10px; margin-top: 10px; text-align: left; }
         .preview-img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; margin-right: 12px; }
-
-        #about-page { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; padding: 40px 20px; box-sizing: border-box; text-align: left; overflow-y: auto; }
     </style>
 </head>
 <body>
 
     <h2>📲 AirDrop PWA Ultra</h2>
-    <div id="status-box" class="ready">⏳ Iniciando sinal...</div>
-    <div id="loading-spinner" class="spinner"></div>
+    <div id="status-box" class="ready">⏳ Iniciando...</div>
 
     <div class="card">
-        <small>Seu código de conexão:</small>
+        <small>Seu ID para conexão:</small>
         <div id="my-id" style="font-family: monospace; font-size: 18px; margin: 10px 0; font-weight: bold; color: var(--primary);">...</div>
         <div style="display: flex; gap: 8px;">
-            <button class="btn-gray" onclick="copyId()">📋 Copiar</button>
-            <button class="btn-gray" onclick="toggleQR()">📱 Mostrar QR</button>
+            <button class="btn-gray" onclick="copyId()">📋 Copiar Meu ID</button>
+            <button class="btn-gray" onclick="toggleQR()">📱 Ver QR Code</button>
         </div>
-        <div id="qrcode-container"><div id="qrcode"></div></div>
+        <div id="qrcode-container" style="display:none; margin-top:10px;"><div id="qrcode" style="display:inline-block;"></div></div>
     </div>
 
     <div class="card">
-        <div id="reader-container" style="display:none;">
-            <div id="reader"></div>
+        <div id="reader-container" style="display:none; margin-bottom:10px;">
+            <div id="reader" style="border-radius:10px; overflow:hidden;"></div>
             <button class="btn-red" onclick="stopScanner()">❌ Fechar Câmera</button>
         </div>
-        
-        <input type="text" id="remote-id" placeholder="ID do parceiro">
+        <input type="text" id="remote-id" placeholder="Cole o ID do parceiro aqui">
         <div style="display: flex; gap: 8px;">
+            <button class="btn-gray" onclick="pasteId()">📋 Colar ID</button>
             <button class="btn-blue" onclick="startScanner()">📷 Escanear</button>
             <button class="btn-green" onclick="connect()">🔗 Conectar</button>
         </div>
     </div>
 
     <div id="transfer-area" class="card" style="display: none;">
+        <div class="switch-container">
+            <span>Download Automático</span>
+            <label class="switch"><input type="checkbox" id="auto-download" checked><span class="slider"></span></label>
+        </div>
+
+        <button id="folder-btn" class="btn-gray" onclick="selectDestinationFolder()" style="font-size: 11px;">📂 Escolher Pasta "Transfer PWA" (Só PC)</button>
+
         <div id="chat-box"></div>
         <div style="display: flex; gap: 5px; margin-bottom: 15px;">
             <input type="text" id="chat-input" placeholder="Mensagem..." style="margin:0;">
             <button class="btn-blue" onclick="sendChat()" style="width: 80px; margin:0;">Enviar</button>
         </div>
-        <hr style="border:0; border-top:1px solid #eee;">
-        <input type="file" id="file-input" multiple>
-        <div class="progress-container" id="p-container"><div id="progress-bar">0%</div></div>
-        <button class="btn-blue" onclick="sendFile()">🚀 Enviar Arquivos</button>
+
+        <div id="drop-zone" class="drop-zone">🖱️ Arraste arquivos ou clique aqui</div>
+        <input type="file" id="file-input" multiple style="display: none;">
+        
+        <div id="p-container" style="display:none; background:#eee; border-radius:10px; overflow:hidden; margin-bottom:10px;">
+            <div id="progress-bar" style="width:0%; height:20px; background:var(--success); color:white; font-size:12px; line-height:20px;">0%</div>
+        </div>
+        
+        <button class="btn-blue" onclick="sendFile()">🚀 Enviar Selecionados</button>
         <div id="download-area"></div>
         <button class="btn-red" onclick="clearHistory()" style="margin-top: 15px; font-size: 11px;">🗑️ Limpar Lista</button>
     </div>
 
-    <button onclick="toggleAbout()" style="background:none; color:#888; font-size:12px;">ℹ️ Sobre o App</button>
-
-    <div id="about-page">
-        <span onclick="toggleAbout()" style="float:right; font-size:24px; cursor:pointer;">✕</span>
-        <h2>Sobre o App</h2>
-        <p>Transferência P2P via WebRTC. Arquivos e mensagens diretas.</p>
-        <p><strong>Download Automático:</strong> Ativado por padrão.</p>
-    </div>
-
     <script>
         const peer = new Peer({ debug: 2 });
-        let conn, html5QrCode, qrGenerated = false;
-
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+        let conn, html5QrCode, qrGenerated = false, directoryHandle = null;
 
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
-            updateStatus("🟢 Online. Aguardando...", "ready");
+            updateStatus("🟢 Online", "ready");
+            checkAutoReconnect();
         });
 
-        peer.on('connection', connection => handleConnection(connection));
+        peer.on('connection', c => handleConnection(c));
+        peer.on('error', e => updateStatus("❌ Erro: " + e.type, "error"));
 
-        peer.on('error', err => {
-            updateStatus("❌ Erro: " + err.type, "error");
-            document.getElementById('loading-spinner').style.display = 'none';
-        });
+        function checkAutoReconnect() {
+            const lastId = localStorage.getItem('last_id');
+            if (lastId) {
+                updateStatus("🔄 Tentando reconectar ao último ID...", "ready");
+                handleConnection(peer.connect(lastId));
+            }
+        }
 
         function connect() {
             const rId = document.getElementById('remote-id').value.trim();
             if (!rId) return;
-            document.getElementById('loading-spinner').style.display = 'block';
+            localStorage.setItem('last_id', rId);
             handleConnection(peer.connect(rId));
         }
 
         function handleConnection(connection) {
             conn = connection;
             conn.on('open', () => {
-                document.getElementById('loading-spinner').style.display = 'none';
                 updateStatus("✅ Conectado!", "connected");
                 document.getElementById('transfer-area').style.display = 'block';
             });
-
-            conn.on('data', data => {
-                if (data.type === 'CHAT') renderChatMessage("Parceiro", data.msg);
-                else if (data.type === 'CONFIRMATION') updateStatus(`🚀 Recebido: ${data.fileName}`, "connected");
-                else {
-                    const blob = new Blob([data.file], { type: data.type });
-                    const url = URL.createObjectURL(blob);
-                    renderPreview(data.name, data.type, url);
-                    
-                    // DOWNLOAD AUTOMÁTICO
-                    const a = document.createElement('a');
-                    a.href = url; a.download = data.name;
-                    document.body.appendChild(a); a.click();
-                    document.body.removeChild(a);
-
-                    conn.send({ type: 'CONFIRMATION', fileName: data.name });
-                }
+            conn.on('close', () => {
+                updateStatus("⚠️ Desconectado. Tentando reconectar...", "error");
+                setTimeout(checkAutoReconnect, 3000);
             });
+            conn.on('data', data => handleData(data));
         }
 
-        // LÓGICA DO SCANNER
-        async function startScanner() {
-            document.getElementById('reader-container').style.display = 'block';
-            html5QrCode = new Html5Qrcode("reader");
-            try {
-                await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => {
-                    document.getElementById('remote-id').value = txt;
-                    stopScanner();
-                    connect();
-                });
-            } catch (err) { alert("Erro na câmera: " + err); stopScanner(); }
-        }
+        async function handleData(data) {
+            if (data.type === 'CHAT') renderChat("Parceiro", data.msg);
+            else if (data.type === 'CONFIRMATION') updateStatus(`🚀 Parceiro recebeu: ${data.fileName}`, "connected");
+            else {
+                const blob = new Blob([data.file], { type: data.type });
+                const url = URL.createObjectURL(blob);
+                renderPreview(data.name, data.type, url);
 
-        function stopScanner() {
-            if (html5QrCode) html5QrCode.stop().then(() => { document.getElementById('reader-container').style.display = 'none'; });
-            else document.getElementById('reader-container').style.display = 'none';
-        }
-
-        // FUNÇÕES AUXILIARES
-        function sendChat() {
-            const input = document.getElementById('chat-input');
-            if (input.value.trim() && conn?.open) {
-                conn.send({ type: 'CHAT', msg: input.value });
-                renderChatMessage("Você", input.value);
-                input.value = '';
+                if (document.getElementById('auto-download').checked) {
+                    if (directoryHandle) {
+                        const fileHandle = await directoryHandle.getFileHandle(data.name, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = url; a.download = data.name;
+                        a.click();
+                    }
+                }
+                conn.send({ type: 'CONFIRMATION', fileName: data.name });
             }
         }
 
-        function renderChatMessage(s, m) {
-            const box = document.getElementById('chat-box');
-            const div = document.createElement('div');
-            const linked = m.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
-            div.innerHTML = `<strong>${s}:</strong> ${linked}`;
-            box.appendChild(div); box.scrollTop = box.scrollHeight;
+        // --- SISTEMA DE PASTA ---
+        async function selectDestinationFolder() {
+            try {
+                directoryHandle = await window.showDirectoryPicker();
+                document.getElementById('folder-btn').innerText = "✅ Salvando em: " + directoryHandle.name;
+            } catch (e) { alert("Navegador não suporta escolha de pasta ou permissão negada."); }
+        }
+
+        // --- DRAG AND DROP ---
+        const dz = document.getElementById('drop-zone');
+        const fi = document.getElementById('file-input');
+        dz.onclick = () => fi.click();
+        dz.ondragover = e => { e.preventDefault(); dz.classList.add('drag-over'); };
+        dz.ondragleave = () => dz.classList.remove('drag-over');
+        dz.ondrop = e => { e.preventDefault(); dz.classList.remove('drag-over'); fi.files = e.dataTransfer.files; dz.innerText = fi.files.length + " arquivo(s) prontos."; };
+
+        // --- FUNÇÕES GERAIS ---
+        function sendFile() {
+            const files = fi.files;
+            if (!files.length || !conn) return;
+            const bar = document.getElementById('progress-bar');
+            document.getElementById('p-container').style.display = 'block';
+            Array.from(files).forEach((f, i) => {
+                const reader = new FileReader();
+                reader.onprogress = e => { if(e.lengthComputable) bar.style.width = Math.round((e.loaded/e.total)*100) + '%'; };
+                reader.onload = e => {
+                    conn.send({ file: e.target.result, name: f.name, type: f.type });
+                    if (i === files.length - 1) setTimeout(() => document.getElementById('p-container').style.display='none', 2000);
+                };
+                reader.readAsArrayBuffer(f);
+            });
+        }
+
+        function sendChat() {
+            const i = document.getElementById('chat-input');
+            if (i.value.trim() && conn?.open) {
+                conn.send({ type: 'CHAT', msg: i.value });
+                renderChat("Você", i.value);
+                i.value = '';
+            }
+        }
+
+        function renderChat(s, m) {
+            const b = document.getElementById('chat-box');
+            const d = document.createElement('div');
+            const l = m.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+            d.innerHTML = `<strong>${s}:</strong> ${l}`;
+            b.appendChild(d); b.scrollTop = b.scrollHeight;
         }
 
         function renderPreview(n, t, u) {
             const area = document.getElementById('download-area');
             const card = document.createElement('div');
             card.className = 'preview-card';
-            const isImg = t.startsWith('image/');
-            card.innerHTML = `
-                ${isImg ? `<img src="${u}" class="preview-img">` : `<div class="preview-img" style="display:flex;align-items:center;justify-content:center;">📄</div>`}
-                <div style="flex-grow:1; overflow:hidden;">
-                    <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${n}</strong>
-                    <small style="color:green;">⬇️ Baixado automaticamente</small>
-                </div>`;
+            card.innerHTML = `${t.startsWith('image/') ? `<img src="${u}" class="preview-img">` : '📄'} <div><strong>${n}</strong><br><small>Recebido</small></div>`;
             area.prepend(card);
         }
 
-        function sendFile() {
-            const input = document.getElementById('file-input');
-            const files = input.files;
-            if (!files.length || !conn) return;
-            const bar = document.getElementById('progress-bar');
-            const container = document.getElementById('p-container');
-            container.style.display = 'block';
-
-            Array.from(files).forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onprogress = e => { if (e.lengthComputable) { const pct = Math.round((e.loaded/e.total)*100); bar.style.width = pct+'%'; bar.innerText = pct+'%'; }};
-                reader.onload = e => {
-                    conn.send({ file: e.target.result, name: file.name, type: file.type });
-                    if (index === files.length - 1) setTimeout(() => { container.style.display = 'none'; bar.style.width = '0%'; }, 2000);
-                };
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        function updateStatus(txt, cls) { const b = document.getElementById('status-box'); b.innerText = txt; b.className = cls; }
-        function toggleQR() {
-            const c = document.getElementById('qrcode-container');
-            c.style.display = (c.style.display === 'none') ? 'block' : 'none';
-            if (c.style.display === 'block' && !qrGenerated) {
-                new QRCode(document.getElementById("qrcode"), { text: document.getElementById('my-id').innerText, width: 128, height: 128 });
-                qrGenerated = true;
-            }
-        }
-        function toggleAbout() { const a = document.getElementById('about-page'); a.style.display = (a.style.display === 'block') ? 'none' : 'block'; }
+        function updateStatus(t, c) { const s = document.getElementById('status-box'); s.innerText = t; s.className = c; }
         function copyId() { navigator.clipboard.writeText(document.getElementById('my-id').innerText); alert("Copiado!"); }
         async function pasteId() { try { document.getElementById('remote-id').value = await navigator.clipboard.readText(); } catch { alert("Cole manualmente."); } }
+        function toggleQR() { const c = document.getElementById('qrcode-container'); c.style.display = c.style.display==='none'?'block':'none'; if(!qrGenerated){ new QRCode(document.getElementById("qrcode"), document.getElementById('my-id').innerText); qrGenerated=true; } }
+        async function startScanner() {
+            document.getElementById('reader-container').style.display='block';
+            html5QrCode = new Html5Qrcode("reader");
+            await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { document.getElementById('remote-id').value = txt; stopScanner(); connect(); });
+        }
+        function stopScanner() { if(html5QrCode) html5QrCode.stop().then(()=>document.getElementById('reader-container').style.display='none'); }
         function clearHistory() { document.getElementById('download-area').innerHTML = ''; }
+        window.onbeforeunload = () => { if (conn?.open) return "Conexão ativa!"; };
     </script>
 </body>
 </html>
