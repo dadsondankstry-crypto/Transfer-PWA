@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AirDrop PWA Ultra</title>
+    <title>AirDrop PWA Ultra - Com Histórico</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -25,21 +25,17 @@
         .connected { background: #d4edda; color: #155724; }
         .error { background: #f8d7da; color: #721c24; }
 
-        .switch-container { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; font-size: 14px; }
-        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--success); }
-        input:checked + .slider:before { transform: translateX(20px); }
-
         .drop-zone { border: 2px dashed #ccc; border-radius: 12px; padding: 25px; background: #fafafa; cursor: pointer; margin-bottom: 10px; }
         #file-list-preview { text-align: left; font-size: 12px; background: #fffbe6; padding: 10px; border-radius: 8px; margin: 10px 0; display: none; border: 1px solid #ffe58f; }
-        #chat-box { height: 120px; overflow-y: auto; background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: left; }
-        .preview-card { display: flex; align-items: center; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 10px; margin-top: 10px; text-align: left; }
-        .preview-img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; margin-right: 12px; }
+        #chat-box { height: 120px; overflow-y: auto; background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: left; font-size: 13px; }
+        
+        /* Estilo do Histórico */
+        .preview-card { display: flex; align-items: center; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 10px; margin-top: 10px; text-align: left; gap: 10px; }
+        .preview-img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; }
+        .history-label { font-size: 10px; font-weight: bold; text-transform: uppercase; display: block; }
+        
         #p-container { display:none; background:#eee; border-radius:10px; overflow:hidden; margin-bottom:10px; }
-        #progress-bar { width:0%; height:20px; background:var(--success); color:white; font-size:12px; line-height:20px; transition: width 0.1s; }
+        #progress-bar { width:0%; height:20px; background:var(--primary); color:white; font-size:12px; line-height:20px; transition: width 0.1s; text-align: center; }
     </style>
 </head>
 <body>
@@ -48,45 +44,28 @@
     <div id="status-box" class="ready">⏳ Iniciando sinal...</div>
 
     <div class="card">
-        <small>Seu ID para conexão:</small>
-        <div id="my-id" style="font-family: monospace; font-size: 1.2rem; margin: 10px 0; font-weight: bold; color: var(--primary);">...</div>
+        <small>Seu ID:</small>
+        <div id="my-id" style="font-weight: bold; color: var(--primary); margin-bottom: 10px;">...</div>
         <div style="display: flex; gap: 8px;">
-            <button class="btn-blue" style="flex:1" onclick="copyId()">📋 Copiar Meu ID</button>
-            <button class="btn-gray" onclick="toggleQR()">📱 Ver QR Code</button>
+            <button class="btn-blue" style="flex:1" onclick="copyId()">📋 Copiar</button>
+            <button class="btn-gray" onclick="toggleQR()">📱 QR</button>
         </div>
         <div id="qrcode-container" style="display:none; margin-top:10px;"><div id="qrcode" style="display:inline-block;"></div></div>
     </div>
 
     <div class="card">
         <input type="text" id="remote-id" placeholder="ID do parceiro">
-        <div style="display: flex; flex-direction: column; gap: 5px;">
-            <div style="display: flex; gap: 8px;">
-                <button class="btn-gray" style="flex:1" onclick="pasteId()">📋 Colar ID</button>
-                <button class="btn-gray" style="flex:1" onclick="startScanner()">📷 Escanear</button>
-            </div>
-            <button class="btn-green" onclick="connect()">🔗 Conectar Agora</button>
-        </div>
-        <div id="reader-container" style="display:none; margin-top:10px;">
-            <div id="reader"></div>
-            <button class="btn-red" onclick="stopScanner()">❌ Cancelar</button>
-        </div>
+        <button class="btn-green" onclick="connect()">🔗 Conectar Agora</button>
     </div>
 
     <div id="transfer-area" class="card" style="display: none;">
-        <div class="switch-container">
-            <span>Download Automático</span>
-            <label class="switch"><input type="checkbox" id="auto-download" checked><span class="slider"></span></label>
-        </div>
-
-        <button id="folder-btn" class="btn-gray" onclick="selectDestinationFolder()" style="font-size: 11px;">📂 Definir Pasta Fixa (PC)</button>
-
         <div id="chat-box"></div>
         <div style="display: flex; gap: 5px; margin-bottom: 15px;">
             <input type="text" id="chat-input" placeholder="Mensagem...">
             <button class="btn-blue" onclick="sendChat()" style="width: 80px;">Enviar</button>
         </div>
 
-        <div id="drop-zone" class="drop-zone">🖱️ Arraste arquivos ou clique aqui</div>
+        <div id="drop-zone" class="drop-zone">🖱️ Arraste ou Clique para Selecionar</div>
         <input type="file" id="file-input" multiple style="display: none;">
         
         <div id="file-list-preview"></div>
@@ -96,28 +75,29 @@
         </div>
         
         <button class="btn-blue" onclick="sendFile()">🚀 Enviar Arquivos</button>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <h4 style="margin: 0; text-align: left;">🕒 Histórico de Transferência</h4>
         <div id="download-area"></div>
-        <button class="btn-red" onclick="clearHistory()" style="margin-top: 15px; font-size: 11px;">🗑️ Limpar Lista</button>
+        <button class="btn-red" onclick="clearHistory()" style="margin-top: 15px; font-size: 11px;">🗑️ Limpar Histórico</button>
     </div>
 
     <script>
         const peer = new Peer({ debug: 2 });
-        let conn, html5QrCode, qrGenerated = false, directoryHandle = null;
+        let conn, qrGenerated = false;
         const fi = document.getElementById('file-input');
         const dz = document.getElementById('drop-zone');
 
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
             updateStatus("🟢 Online", "ready");
-            const last = localStorage.getItem('last_id');
-            if(last) { handleConnection(peer.connect(last)); }
         });
 
         peer.on('connection', c => handleConnection(c));
 
         function connect() {
             const rId = document.getElementById('remote-id').value.trim();
-            if (rId) { localStorage.setItem('last_id', rId); handleConnection(peer.connect(rId)); }
+            if (rId) handleConnection(peer.connect(rId));
         }
 
         function handleConnection(connection) {
@@ -131,28 +111,22 @@
 
         async function handleData(data) {
             if (data.type === 'CHAT') renderChat("Parceiro", data.msg);
-            else if (data.type === 'CONFIRMATION') updateStatus(`🚀 Parceiro recebeu: ${data.fileName}`, "connected");
-            else {
+            else if (data.type === 'CONFIRMATION') {
+                renderChat("Sistema", `✅ Recebido pelo parceiro: ${data.fileName}`);
+            } else {
                 const blob = new Blob([data.file], { type: data.type });
                 const url = URL.createObjectURL(blob);
-                renderPreview(data.name, data.type, url);
+                
+                addToHistory(data.name, data.type, url, false);
 
-                if (document.getElementById('auto-download').checked) {
-                    if (directoryHandle) {
-                        const fh = await directoryHandle.getFileHandle(data.name, { create: true });
-                        const wr = await fh.createWritable();
-                        await wr.write(blob); await wr.close();
-                    } else {
-                        const a = document.createElement('a');
-                        a.href = url; a.download = "Transfer_PWA/" + data.name;
-                        a.click();
-                    }
-                }
+                const a = document.createElement('a');
+                a.href = url; a.download = data.name;
+                a.click();
+                
                 conn.send({ type: 'CONFIRMATION', fileName: data.name });
             }
         }
 
-        // --- VISUALIZAÇÃO PRÉ-ENVIO ---
         fi.onchange = () => updateFilePreview();
         dz.onclick = () => fi.click();
         dz.ondragover = e => { e.preventDefault(); dz.style.borderColor = "var(--primary)"; };
@@ -164,11 +138,28 @@
             const files = fi.files;
             if (files.length > 0) {
                 list.style.display = 'block';
-                list.innerHTML = `<strong>Selecionados (${files.length}):</strong><br>`;
+                list.innerHTML = `<strong>Pronto para enviar:</strong><br>`;
                 Array.from(files).forEach(f => {
-                    list.innerHTML += `• ${f.name} (${(f.size/1024/1024).toFixed(2)} MB)<br>`;
+                    list.innerHTML += `• ${f.name}<br>`;
                 });
             } else { list.style.display = 'none'; }
+        }
+
+        function addToHistory(name, type, url, isSent) {
+            const area = document.getElementById('download-area');
+            const card = document.createElement('div');
+            card.className = 'preview-card';
+            card.style.borderLeft = isSent ? "5px solid var(--primary)" : "5px solid var(--success)";
+            
+            card.innerHTML = `
+                ${type.startsWith('image/') ? `<img src="${url}" class="preview-img">` : '📄'}
+                <div style="flex-grow:1">
+                    <span class="history-label">${isSent ? 'Enviado' : 'Recebido'}</span>
+                    <strong style="font-size:12px;">${name}</strong>
+                </div>
+                ${!isSent ? `<a href="${url}" download="${name}" style="text-decoration:none; font-size:20px;">💾</a>` : '<span style="font-size:12px">✅</span>'}
+            `;
+            area.prepend(card);
         }
 
         function sendFile() {
@@ -183,28 +174,32 @@
                     if(e.lengthComputable) {
                         const pct = Math.round((e.loaded / e.total) * 100);
                         bar.style.width = pct + '%';
-                        bar.innerText = `${pct}% - ${f.name}`;
+                        bar.innerText = `Enviando ${f.name}: ${pct}%`;
                     }
                 };
                 reader.onload = e => {
                     conn.send({ file: e.target.result, name: f.name, type: f.type });
+                    
+                    // Adiciona ao seu histórico local
+                    const localUrl = f.type.startsWith('image/') ? URL.createObjectURL(f) : "";
+                    addToHistory(f.name, f.type, localUrl, true);
+
                     if (i === files.length - 1) {
+                        bar.style.background = "var(--success)";
+                        bar.innerText = "🚀 100% - Arquivos Enviados!";
                         setTimeout(() => { 
                             document.getElementById('p-container').style.display='none'; 
                             document.getElementById('file-list-preview').style.display='none';
                             fi.value = "";
-                        }, 2000);
+                            bar.style.width = "0%";
+                            bar.style.background = "var(--primary)";
+                        }, 4000);
                     }
                 };
                 reader.readAsArrayBuffer(f);
             });
         }
 
-        // --- OUTRAS FUNÇÕES ---
-        async function selectDestinationFolder() {
-            try { directoryHandle = await window.showDirectoryPicker(); document.getElementById('folder-btn').innerText = "✅ Pasta: " + directoryHandle.name; } 
-            catch (e) { alert("Não suportado."); }
-        }
         function sendChat() {
             const i = document.getElementById('chat-input');
             if (i.value.trim() && conn?.open) { conn.send({ type: 'CHAT', msg: i.value }); renderChat("Você", i.value); i.value = ''; }
@@ -212,26 +207,12 @@
         function renderChat(s, m) {
             const b = document.getElementById('chat-box');
             const d = document.createElement('div');
-            d.innerHTML = `<strong>${s}:</strong> ${m}`;
+            d.innerHTML = `<span style="color:${s==='Você'?'blue':'green'}"><strong>${s}:</strong></span> ${m}`;
             b.appendChild(d); b.scrollTop = b.scrollHeight;
-        }
-        function renderPreview(n, t, u) {
-            const area = document.getElementById('download-area');
-            const card = document.createElement('div');
-            card.className = 'preview-card';
-            card.innerHTML = `${t.startsWith('image/') ? `<img src="${u}" class="preview-img">` : '📄'} <div><strong>${n}</strong></div>`;
-            area.prepend(card);
         }
         function updateStatus(t, c) { const s = document.getElementById('status-box'); s.innerText = t; s.className = c; }
         function copyId() { navigator.clipboard.writeText(document.getElementById('my-id').innerText); alert("ID Copiado!"); }
-        async function pasteId() { try { document.getElementById('remote-id').value = await navigator.clipboard.readText(); } catch { alert("Cole manualmente."); } }
         function toggleQR() { const c = document.getElementById('qrcode-container'); c.style.display = c.style.display==='none'?'block':'none'; if(!qrGenerated){ new QRCode(document.getElementById("qrcode"), document.getElementById('my-id').innerText); qrGenerated=true; } }
-        async function startScanner() {
-            document.getElementById('reader-container').style.display='block';
-            html5QrCode = new Html5Qrcode("reader");
-            await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { document.getElementById('remote-id').value = txt; stopScanner(); connect(); });
-        }
-        function stopScanner() { if(html5QrCode) html5QrCode.stop().then(()=>document.getElementById('reader-container').style.display='none'); }
         function clearHistory() { document.getElementById('download-area').innerHTML = ''; }
     </script>
 </body>
