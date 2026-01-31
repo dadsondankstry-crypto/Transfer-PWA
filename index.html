@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transfer PWA</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon.png">
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; text-align: center; }
@@ -35,20 +36,20 @@
     <div id="status">Aguardando conexão...</div>
 
     <script>
-        // Registro do Service Worker para PWA
+        // Registro do Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js');
+            navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW registrado', reg))
+            .catch(err => console.log('Erro SW', err));
         }
 
-        const peer = new Peer(); // Cria uma conexão Peer-to-Peer
+        const peer = new Peer(); 
         let conn;
 
-        // Ao abrir o app e receber um ID
         peer.on('open', (id) => {
             document.getElementById('my-id').innerText = id;
         });
 
-        // Quando alguém tenta conectar em você
         peer.on('connection', (connection) => {
             conn = connection;
             setupConnection();
@@ -56,7 +57,6 @@
             document.getElementById('file-area').style.display = 'block';
         });
 
-        // Função para conectar ativamente no outro ID
         function connect() {
             const remoteId = document.getElementById('remote-id').value;
             conn = peer.connect(remoteId);
@@ -67,33 +67,31 @@
             });
         }
 
-        // Configura recebimento de dados
         function setupConnection() {
             conn.on('data', (data) => {
-                // Simples manipulação de recebimento (Blob)
                 const blob = new Blob([data.file], { type: data.type });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = data.name;
                 a.innerText = "Baixar: " + data.name;
+                a.style.display = "block"; 
+                a.style.marginTop = "10px";
                 document.body.appendChild(a);
                 document.getElementById('status').innerText = "Arquivo recebido!";
             });
         }
 
-        // Função de envio
         function sendFile() {
             const fileInput = document.getElementById('file-input');
             const file = fileInput.files[0];
             if (file && conn) {
                 document.getElementById('status').innerText = "Enviando...";
                 
-                // Leitura e envio
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     conn.send({
-                        file: e.target.result, // ArrayBuffer
+                        file: e.target.result, 
                         name: file.name,
                         type: file.type
                     });
