@@ -3,190 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transfer PWA</title>
+    <title>Transfer PWA V2</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; text-align: center; max-width: 600px; margin: 0 auto; }
-        input, button { padding: 12px; margin: 10px 0; width: 100%; box-sizing: border-box; }
-        #my-id { font-weight: bold; color: blue; word-break: break-all; user-select: all; cursor: pointer; }
-        #status { margin-top: 20px; font-weight: bold; min-height: 20px; }
-        #progress-container { width: 100%; background-color: #f3f3f3; height: 10px; margin-top: 10px; display: none; }
-        #progress-bar { width: 0%; height: 100%; background-color: #4caf50; transition: width 0.2s; }
+        body { font-family: sans-serif; padding: 20px; text-align: center; max-width: 600px; margin: auto; }
+        input, button { padding: 15px; margin: 10px 0; width: 100%; box-sizing: border-box; font-size: 16px; }
+        #my-id { font-weight: bold; color: blue; word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 5px; user-select: all;}
+        #status { margin-top: 20px; font-weight: bold; padding: 10px; }
+        .error { color: red; }
+        .success { color: green; }
     </style>
 </head>
 <body>
 
     <h2>Transferência PWA</h2>
     
-    <p>Seu ID (toque para copiar):</p>
+    <p>Seu ID (Toque para copiar):</p>
     <div id="my-id" onclick="copyId()">Gerando ID...</div>
 
     <hr>
 
     <p>Conectar com outro dispositivo:</p>
     <input type="text" id="remote-id" placeholder="Cole o ID do outro dispositivo aqui">
-    <button onclick="connect()">Conectar</button>
+    <button onclick="pasteId()">📋 Colar ID (Celular)</button>
+    <button onclick="connect()">🔗 Conectar</button>
 
     <div id="file-area" style="display:none;">
         <hr>
+        <h3>Enviar Arquivo</h3>
         <input type="file" id="file-input">
-        <button onclick="sendFile()">Enviar Arquivo</button>
-        <div id="progress-container">
-            <div id="progress-bar"></div>
-        </div>
+        <button onclick="sendFile()">📤 Enviar</button>
     </div>
 
-    <div id="status">Aguardando conexão...</div>
+    <div id="status">Aguardando...</div>
 
     <script>
-        // --- Service Worker ---
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('SW registrado'))
-            .catch(err => console.log('Erro SW', err));
+            navigator.serviceWorker.register('./sw.js');
         }
 
-        // --- Variáveis Globais ---
-        const peer = new Peer(); 
+        const peer = new Peer({
+            debug: 2 // Mostra erros no console
+        }); 
         let conn;
-        
-        // Configuração de Chunking (16KB é seguro para WebRTC)
-        const CHUNK_SIZE = 16384; 
-        let incomingFile = { meta: null, buffer: [] };
 
-        // --- PeerJS Eventos ---
+        // Mostra o ID
         peer.on('open', (id) => {
             document.getElementById('my-id').innerText = id;
+            document.getElementById('status').innerText = "Pronto para conectar.";
         });
 
+        // REGRAS DE ERRO (Isso faltava no anterior)
+        peer.on('error', (err) => {
+            console.error(err);
+            let msg = "Erro desconhecido.";
+            if (err.type === 'peer-unavailable') msg = "ID não encontrado! Verifique se copiou certo.";
+            if (err.type === 'browser-incompatible') msg = "Navegador incompatível.";
+            if (err.type === 'network') msg = "Erro de rede / Firewall bloqueando.";
+            if (err.type === 'disconnected') msg = "Desconectado do servidor.";
+            
+            document.getElementById('status').innerText = "ERRO: " + msg;
+            document.getElementById('status').className = "error";
+            alert("ERRO: " + msg);
+        });
+
+        peer.on('disconnected', () => {
+            document.getElementById('status').innerText = "Conexão perdida. Recarregue a página.";
+        });
+
+        // Receber conexão
         peer.on('connection', (connection) => {
             handleConnection(connection);
         });
 
         function connect() {
-            const remoteId = document.getElementById('remote-id').value;
-            if(!remoteId) return alert("Insira um ID!");
+            const remoteId = document.getElementById('remote-id').value.trim();
+            if (!remoteId) return alert("Cole o ID primeiro!");
+            
+            document.getElementById('status').innerText = "Tentando conectar...";
             const connection = peer.connect(remoteId);
             handleConnection(connection);
         }
 
         function handleConnection(connection) {
             conn = connection;
+            
             conn.on('open', () => {
-                document.getElementById('status').innerText = "Conectado!";
+                document.getElementById('status').innerText = "Conectado com sucesso!";
+                document.getElementById('status').className = "success";
                 document.getElementById('file-area').style.display = 'block';
             });
-            conn.on('data', handleData);
+
             conn.on('close', () => {
-                document.getElementById('status').innerText = "Desconectado.";
+                document.getElementById('status').innerText = "O outro dispositivo desconectou.";
                 document.getElementById('file-area').style.display = 'none';
             });
-        }
 
-        // --- Recebimento de Arquivos (Chunks) ---
-        function handleData(data) {
-            const status = document.getElementById('status');
-            
-            if (data.type === 'start') {
-                // Início do arquivo: preparar buffer
-                incomingFile.meta = data;
-                incomingFile.buffer = [];
-                status.innerText = `Recebendo: ${data.name} (${formatBytes(data.size)})`;
-                updateProgress(0);
-                document.getElementById('progress-container').style.display = 'block';
-
-            } else if (data.type === 'chunk') {
-                // Recebendo pedaços
-                incomingFile.buffer.push(data.data);
-                
-                // Calcular progresso aproximado
-                const receivedBytes = incomingFile.buffer.length * CHUNK_SIZE;
-                const percent = Math.min(100, (receivedBytes / incomingFile.meta.size) * 100);
-                updateProgress(percent);
-
-            } else if (data.type === 'end') {
-                // Fim do arquivo: montar e baixar
-                updateProgress(100);
-                status.innerText = "Processando arquivo...";
-                
-                const blob = new Blob(incomingFile.buffer, { type: incomingFile.meta.mime });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = incomingFile.meta.name;
-                a.innerText = `Baixar: ${incomingFile.meta.name}`;
-                a.style.display = "block"; 
-                a.style.marginTop = "15px";
-                a.style.fontWeight = "bold";
-                document.body.appendChild(a);
-                
-                status.innerText = "Arquivo recebido com sucesso!";
-                
-                // Limpar buffer para liberar memória
-                incomingFile.buffer = []; 
-            }
-        }
-
-        // --- Envio de Arquivos (Chunks) ---
-        async function sendFile() {
-            const fileInput = document.getElementById('file-input');
-            const file = fileInput.files[0];
-            
-            if (!file || !conn) return;
-
-            document.getElementById('status').innerText = "Iniciando envio...";
-            document.getElementById('progress-container').style.display = 'block';
-            
-            // 1. Enviar metadados
-            conn.send({ 
-                type: 'start', 
-                name: file.name, 
-                mime: file.type, 
-                size: file.size 
+            conn.on('error', (err) => {
+                alert("Erro na conexão: " + err);
             });
 
-            // 2. Ler e enviar em pedaços
-            let offset = 0;
-            while (offset < file.size) {
-                const chunk = file.slice(offset, offset + CHUNK_SIZE);
-                const buffer = await chunk.arrayBuffer();
+            // Receber Arquivo
+            conn.on('data', (data) => {
+                const blob = new Blob([data.file], { type: data.type });
+                const url = URL.createObjectURL(blob);
                 
-                conn.send({ type: 'chunk', data: buffer });
+                // Cria link de download
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = data.name;
+                a.innerText = "📥 Baixar: " + data.name;
+                a.style.display = "block";
+                a.style.marginTop = "10px";
+                a.style.fontSize = "18px";
+                a.style.background = "#d4edda";
+                a.style.padding = "10px";
                 
-                offset += CHUNK_SIZE;
+                document.getElementById('file-area').appendChild(a);
+                document.getElementById('status').innerText = "Arquivo recebido!";
+            });
+        }
+
+        function sendFile() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            if (file && conn) {
+                document.getElementById('status').innerText = "Enviando " + file.name + "...";
                 
-                // Atualizar progresso visualmente
-                const percent = Math.min(100, (offset / file.size) * 100);
-                updateProgress(percent);
-                
-                // Pequena pausa para não engasgar a thread UI (opcional mas recomendado)
-                if (offset % (CHUNK_SIZE * 100) === 0) await new Promise(r => setTimeout(r, 0));
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    conn.send({
+                        file: e.target.result,
+                        name: file.name,
+                        type: file.type
+                    });
+                    document.getElementById('status').innerText = "Arquivo enviado!";
+                };
+                reader.readAsArrayBuffer(file);
             }
-
-            // 3. Sinalizar fim
-            conn.send({ type: 'end' });
-            document.getElementById('status').innerText = "Envio concluído!";
         }
 
-        // --- Utilitários ---
-        function updateProgress(percent) {
-            document.getElementById('progress-bar').style.width = percent + '%';
-        }
-
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
+        // Funções auxiliares de Copiar/Colar
         function copyId() {
             const idText = document.getElementById('my-id').innerText;
             navigator.clipboard.writeText(idText).then(() => alert("ID Copiado!"));
+        }
+
+        async function pasteId() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('remote-id').value = text;
+            } catch (err) {
+                alert("Permissão para colar negada ou não suportada. Cole manualmente.");
+            }
         }
     </script>
 </body>
