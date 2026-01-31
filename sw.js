@@ -1,9 +1,10 @@
-const CACHE_NAME = 'transfer-pwa-v2';
+const CACHE_NAME = 'transfer-pwa-v3';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
-  './icon.png'
+  './icon-192.png',
+  './favicon.png'
 ];
 
 self.addEventListener('install', event => {
@@ -20,7 +21,7 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Ativa o novo cache imediatamente e limpa o antigo
+// Ativa o novo cache e limpa o antigo
 self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
