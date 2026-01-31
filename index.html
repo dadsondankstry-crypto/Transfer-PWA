@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AirDrop PWA Ultra</title>
     <link rel="manifest" href="manifest.json">
-    
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -14,10 +13,8 @@
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --bg: #f4f4f9; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 20px; text-align: center; max-width: 500px; margin: auto; background: var(--bg); color: #333; }
         .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
-        
-        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-bottom: 8px; }
-        
+        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-blue { background: var(--primary); color: white; }
         .btn-green { background: var(--success); color: white; }
         .btn-red { background: var(--danger); color: white; }
@@ -28,8 +25,7 @@
         .connected { background: #d4edda; color: #155724; }
         .error { background: #f8d7da; color: #721c24; }
 
-        /* Switch */
-        .switch-container { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; font-size: 14px; font-weight: bold; }
+        .switch-container { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; font-size: 14px; }
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -37,40 +33,42 @@
         input:checked + .slider { background-color: var(--success); }
         input:checked + .slider:before { transform: translateX(20px); }
 
-        /* Drag and Drop */
-        .drop-zone { border: 2px dashed #ccc; border-radius: 12px; padding: 25px; background: #fafafa; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
-        .drop-zone.drag-over { border-color: var(--primary); background: #eef6ff; }
-
+        .drop-zone { border: 2px dashed #ccc; border-radius: 12px; padding: 25px; background: #fafafa; cursor: pointer; margin-bottom: 10px; }
+        #file-list-preview { text-align: left; font-size: 12px; background: #fffbe6; padding: 10px; border-radius: 8px; margin: 10px 0; display: none; border: 1px solid #ffe58f; }
         #chat-box { height: 120px; overflow-y: auto; background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: left; }
         .preview-card { display: flex; align-items: center; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 10px; margin-top: 10px; text-align: left; }
         .preview-img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; margin-right: 12px; }
+        #p-container { display:none; background:#eee; border-radius:10px; overflow:hidden; margin-bottom:10px; }
+        #progress-bar { width:0%; height:20px; background:var(--success); color:white; font-size:12px; line-height:20px; transition: width 0.1s; }
     </style>
 </head>
 <body>
 
     <h2>📲 AirDrop PWA Ultra</h2>
-    <div id="status-box" class="ready">⏳ Iniciando...</div>
+    <div id="status-box" class="ready">⏳ Iniciando sinal...</div>
 
     <div class="card">
         <small>Seu ID para conexão:</small>
-        <div id="my-id" style="font-family: monospace; font-size: 18px; margin: 10px 0; font-weight: bold; color: var(--primary);">...</div>
+        <div id="my-id" style="font-family: monospace; font-size: 1.2rem; margin: 10px 0; font-weight: bold; color: var(--primary);">...</div>
         <div style="display: flex; gap: 8px;">
-            <button class="btn-gray" onclick="copyId()">📋 Copiar Meu ID</button>
+            <button class="btn-blue" style="flex:1" onclick="copyId()">📋 Copiar Meu ID</button>
             <button class="btn-gray" onclick="toggleQR()">📱 Ver QR Code</button>
         </div>
         <div id="qrcode-container" style="display:none; margin-top:10px;"><div id="qrcode" style="display:inline-block;"></div></div>
     </div>
 
     <div class="card">
-        <div id="reader-container" style="display:none; margin-bottom:10px;">
-            <div id="reader" style="border-radius:10px; overflow:hidden;"></div>
-            <button class="btn-red" onclick="stopScanner()">❌ Fechar Câmera</button>
+        <input type="text" id="remote-id" placeholder="ID do parceiro">
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-gray" style="flex:1" onclick="pasteId()">📋 Colar ID</button>
+                <button class="btn-gray" style="flex:1" onclick="startScanner()">📷 Escanear</button>
+            </div>
+            <button class="btn-green" onclick="connect()">🔗 Conectar Agora</button>
         </div>
-        <input type="text" id="remote-id" placeholder="Cole o ID do parceiro aqui">
-        <div style="display: flex; gap: 8px;">
-            <button class="btn-gray" onclick="pasteId()">📋 Colar ID</button>
-            <button class="btn-blue" onclick="startScanner()">📷 Escanear</button>
-            <button class="btn-green" onclick="connect()">🔗 Conectar</button>
+        <div id="reader-container" style="display:none; margin-top:10px;">
+            <div id="reader"></div>
+            <button class="btn-red" onclick="stopScanner()">❌ Cancelar</button>
         </div>
     </div>
 
@@ -80,22 +78,24 @@
             <label class="switch"><input type="checkbox" id="auto-download" checked><span class="slider"></span></label>
         </div>
 
-        <button id="folder-btn" class="btn-gray" onclick="selectDestinationFolder()" style="font-size: 11px;">📂 Escolher Pasta "Transfer PWA" (Só PC)</button>
+        <button id="folder-btn" class="btn-gray" onclick="selectDestinationFolder()" style="font-size: 11px;">📂 Definir Pasta Fixa (PC)</button>
 
         <div id="chat-box"></div>
         <div style="display: flex; gap: 5px; margin-bottom: 15px;">
-            <input type="text" id="chat-input" placeholder="Mensagem..." style="margin:0;">
-            <button class="btn-blue" onclick="sendChat()" style="width: 80px; margin:0;">Enviar</button>
+            <input type="text" id="chat-input" placeholder="Mensagem...">
+            <button class="btn-blue" onclick="sendChat()" style="width: 80px;">Enviar</button>
         </div>
 
         <div id="drop-zone" class="drop-zone">🖱️ Arraste arquivos ou clique aqui</div>
         <input type="file" id="file-input" multiple style="display: none;">
         
-        <div id="p-container" style="display:none; background:#eee; border-radius:10px; overflow:hidden; margin-bottom:10px;">
-            <div id="progress-bar" style="width:0%; height:20px; background:var(--success); color:white; font-size:12px; line-height:20px;">0%</div>
+        <div id="file-list-preview"></div>
+        
+        <div id="p-container">
+            <div id="progress-bar">0%</div>
         </div>
         
-        <button class="btn-blue" onclick="sendFile()">🚀 Enviar Selecionados</button>
+        <button class="btn-blue" onclick="sendFile()">🚀 Enviar Arquivos</button>
         <div id="download-area"></div>
         <button class="btn-red" onclick="clearHistory()" style="margin-top: 15px; font-size: 11px;">🗑️ Limpar Lista</button>
     </div>
@@ -103,29 +103,21 @@
     <script>
         const peer = new Peer({ debug: 2 });
         let conn, html5QrCode, qrGenerated = false, directoryHandle = null;
+        const fi = document.getElementById('file-input');
+        const dz = document.getElementById('drop-zone');
 
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
             updateStatus("🟢 Online", "ready");
-            checkAutoReconnect();
+            const last = localStorage.getItem('last_id');
+            if(last) { handleConnection(peer.connect(last)); }
         });
 
         peer.on('connection', c => handleConnection(c));
-        peer.on('error', e => updateStatus("❌ Erro: " + e.type, "error"));
-
-        function checkAutoReconnect() {
-            const lastId = localStorage.getItem('last_id');
-            if (lastId) {
-                updateStatus("🔄 Tentando reconectar ao último ID...", "ready");
-                handleConnection(peer.connect(lastId));
-            }
-        }
 
         function connect() {
             const rId = document.getElementById('remote-id').value.trim();
-            if (!rId) return;
-            localStorage.setItem('last_id', rId);
-            handleConnection(peer.connect(rId));
+            if (rId) { localStorage.setItem('last_id', rId); handleConnection(peer.connect(rId)); }
         }
 
         function handleConnection(connection) {
@@ -133,10 +125,6 @@
             conn.on('open', () => {
                 updateStatus("✅ Conectado!", "connected");
                 document.getElementById('transfer-area').style.display = 'block';
-            });
-            conn.on('close', () => {
-                updateStatus("⚠️ Desconectado. Tentando reconectar...", "error");
-                setTimeout(checkAutoReconnect, 3000);
             });
             conn.on('data', data => handleData(data));
         }
@@ -151,13 +139,12 @@
 
                 if (document.getElementById('auto-download').checked) {
                     if (directoryHandle) {
-                        const fileHandle = await directoryHandle.getFileHandle(data.name, { create: true });
-                        const writable = await fileHandle.createWritable();
-                        await writable.write(blob);
-                        await writable.close();
+                        const fh = await directoryHandle.getFileHandle(data.name, { create: true });
+                        const wr = await fh.createWritable();
+                        await wr.write(blob); await wr.close();
                     } else {
                         const a = document.createElement('a');
-                        a.href = url; a.download = data.name;
+                        a.href = url; a.download = "Transfer_PWA/" + data.name;
                         a.click();
                     }
                 }
@@ -165,66 +152,78 @@
             }
         }
 
-        // --- SISTEMA DE PASTA ---
-        async function selectDestinationFolder() {
-            try {
-                directoryHandle = await window.showDirectoryPicker();
-                document.getElementById('folder-btn').innerText = "✅ Salvando em: " + directoryHandle.name;
-            } catch (e) { alert("Navegador não suporta escolha de pasta ou permissão negada."); }
+        // --- VISUALIZAÇÃO PRÉ-ENVIO ---
+        fi.onchange = () => updateFilePreview();
+        dz.onclick = () => fi.click();
+        dz.ondragover = e => { e.preventDefault(); dz.style.borderColor = "var(--primary)"; };
+        dz.ondragleave = () => { dz.style.borderColor = "#ccc"; };
+        dz.ondrop = e => { e.preventDefault(); dz.style.borderColor = "#ccc"; fi.files = e.dataTransfer.files; updateFilePreview(); };
+
+        function updateFilePreview() {
+            const list = document.getElementById('file-list-preview');
+            const files = fi.files;
+            if (files.length > 0) {
+                list.style.display = 'block';
+                list.innerHTML = `<strong>Selecionados (${files.length}):</strong><br>`;
+                Array.from(files).forEach(f => {
+                    list.innerHTML += `• ${f.name} (${(f.size/1024/1024).toFixed(2)} MB)<br>`;
+                });
+            } else { list.style.display = 'none'; }
         }
 
-        // --- DRAG AND DROP ---
-        const dz = document.getElementById('drop-zone');
-        const fi = document.getElementById('file-input');
-        dz.onclick = () => fi.click();
-        dz.ondragover = e => { e.preventDefault(); dz.classList.add('drag-over'); };
-        dz.ondragleave = () => dz.classList.remove('drag-over');
-        dz.ondrop = e => { e.preventDefault(); dz.classList.remove('drag-over'); fi.files = e.dataTransfer.files; dz.innerText = fi.files.length + " arquivo(s) prontos."; };
-
-        // --- FUNÇÕES GERAIS ---
         function sendFile() {
             const files = fi.files;
             if (!files.length || !conn) return;
             const bar = document.getElementById('progress-bar');
             document.getElementById('p-container').style.display = 'block';
+
             Array.from(files).forEach((f, i) => {
                 const reader = new FileReader();
-                reader.onprogress = e => { if(e.lengthComputable) bar.style.width = Math.round((e.loaded/e.total)*100) + '%'; };
+                reader.onprogress = e => {
+                    if(e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        bar.style.width = pct + '%';
+                        bar.innerText = `${pct}% - ${f.name}`;
+                    }
+                };
                 reader.onload = e => {
                     conn.send({ file: e.target.result, name: f.name, type: f.type });
-                    if (i === files.length - 1) setTimeout(() => document.getElementById('p-container').style.display='none', 2000);
+                    if (i === files.length - 1) {
+                        setTimeout(() => { 
+                            document.getElementById('p-container').style.display='none'; 
+                            document.getElementById('file-list-preview').style.display='none';
+                            fi.value = "";
+                        }, 2000);
+                    }
                 };
                 reader.readAsArrayBuffer(f);
             });
         }
 
+        // --- OUTRAS FUNÇÕES ---
+        async function selectDestinationFolder() {
+            try { directoryHandle = await window.showDirectoryPicker(); document.getElementById('folder-btn').innerText = "✅ Pasta: " + directoryHandle.name; } 
+            catch (e) { alert("Não suportado."); }
+        }
         function sendChat() {
             const i = document.getElementById('chat-input');
-            if (i.value.trim() && conn?.open) {
-                conn.send({ type: 'CHAT', msg: i.value });
-                renderChat("Você", i.value);
-                i.value = '';
-            }
+            if (i.value.trim() && conn?.open) { conn.send({ type: 'CHAT', msg: i.value }); renderChat("Você", i.value); i.value = ''; }
         }
-
         function renderChat(s, m) {
             const b = document.getElementById('chat-box');
             const d = document.createElement('div');
-            const l = m.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
-            d.innerHTML = `<strong>${s}:</strong> ${l}`;
+            d.innerHTML = `<strong>${s}:</strong> ${m}`;
             b.appendChild(d); b.scrollTop = b.scrollHeight;
         }
-
         function renderPreview(n, t, u) {
             const area = document.getElementById('download-area');
             const card = document.createElement('div');
             card.className = 'preview-card';
-            card.innerHTML = `${t.startsWith('image/') ? `<img src="${u}" class="preview-img">` : '📄'} <div><strong>${n}</strong><br><small>Recebido</small></div>`;
+            card.innerHTML = `${t.startsWith('image/') ? `<img src="${u}" class="preview-img">` : '📄'} <div><strong>${n}</strong></div>`;
             area.prepend(card);
         }
-
         function updateStatus(t, c) { const s = document.getElementById('status-box'); s.innerText = t; s.className = c; }
-        function copyId() { navigator.clipboard.writeText(document.getElementById('my-id').innerText); alert("Copiado!"); }
+        function copyId() { navigator.clipboard.writeText(document.getElementById('my-id').innerText); alert("ID Copiado!"); }
         async function pasteId() { try { document.getElementById('remote-id').value = await navigator.clipboard.readText(); } catch { alert("Cole manualmente."); } }
         function toggleQR() { const c = document.getElementById('qrcode-container'); c.style.display = c.style.display==='none'?'block':'none'; if(!qrGenerated){ new QRCode(document.getElementById("qrcode"), document.getElementById('my-id').innerText); qrGenerated=true; } }
         async function startScanner() {
@@ -234,7 +233,6 @@
         }
         function stopScanner() { if(html5QrCode) html5QrCode.stop().then(()=>document.getElementById('reader-container').style.display='none'); }
         function clearHistory() { document.getElementById('download-area').innerHTML = ''; }
-        window.onbeforeunload = () => { if (conn?.open) return "Conexão ativa!"; };
     </script>
 </body>
 </html>
