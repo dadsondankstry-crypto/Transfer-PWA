@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; text-align: center; }
+        input, button { padding: 10px; margin: 10px 0; width: 100%; box-sizing: border-box; }
+        #my-id { font-weight: bold; color: blue; word-break: break-all; }
+        #status { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>Transferência PWA</h2>
+    
+    <p>Seu ID:</p>
+    <div id="my-id">Gerando ID...</div>
+
+    <hr>
+
+    <p>Conectar com outro dispositivo:</p>
+    <input type="text" id="remote-id" placeholder="Cole o ID do outro dispositivo aqui">
+    <button onclick="connect()">Conectar</button>
+
+    <div id="file-area" style="display:none;">
+        <hr>
+        <input type="file" id="file-input">
+        <button onclick="sendFile()">Enviar Arquivo</button>
+    </div>
+
+    <div id="status">Aguardando conexão...</div>
+
+    <script>
+        // Registro do Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+
+        const peer = new Peer(); // Cria uma conexão Peer-to-Peer
+        let conn;
+
+        // Ao abrir o app e receber um ID
+        peer.on('open', (id) => {
+            document.getElementById('my-id').innerText = id;
+        });
+
+        // Quando alguém tenta conectar em você
+        peer.on('connection', (connection) => {
+            conn = connection;
+            setupConnection();
+            document.getElementById('status').innerText = "Conectado com: " + conn.peer;
+            document.getElementById('file-area').style.display = 'block';
+        });
+
+        // Função para conectar ativamente no outro ID
+        function connect() {
+            const remoteId = document.getElementById('remote-id').value;
+            conn = peer.connect(remoteId);
+            conn.on('open', () => {
+                setupConnection();
+                document.getElementById('status').innerText = "Conectado!";
+                document.getElementById('file-area').style.display = 'block';
+            });
+        }
+
+        // Configura recebimento de dados
+        function setupConnection() {
+            conn.on('data', (data) => {
+                // Simples manipulação de recebimento (Blob)
+                const blob = new Blob([data.file], { type: data.type });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = data.name;
+                a.innerText = "Baixar: " + data.name;
+                document.body.appendChild(a);
+                document.getElementById('status').innerText = "Arquivo recebido!";
+            });
+        }
+
+        // Função de envio
+        function sendFile() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            if (file && conn) {
+                document.getElementById('status').innerText = "Enviando...";
+                
+                // Leitura e envio
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    conn.send({
+                        file: e.target.result, // ArrayBuffer
+                        name: file.name,
+                        type: file.type
+                    });
+                    document.getElementById('status').innerText = "Enviado!";
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+    </script>
+</body>
+</html>
